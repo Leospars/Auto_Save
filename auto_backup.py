@@ -2,11 +2,20 @@ import threading
 import time
 from pathlib import Path
 import os
-import sys
-import keyboard 
+import keyboard
+import argparse
 
 print("Auto Backup File")
 print("Press Ctrl+Z or Esc to exit the program")
+
+# check user OS support
+if os.name == 'nt':
+    profile = os.getenv('USERPROFILE')
+elif os.name == 'posix':
+    profile = os.getenv('HOME')
+else:
+    print("OS not supported")
+    exit()
 
 stop_event = threading.Event()
 def listen_for_exit():
@@ -26,29 +35,34 @@ except Exception as e:
     print(e)
     print("Error in threading")
     pass
+    
+# Use argparse to handle command-line arguments
+parser = argparse.ArgumentParser(description="Auto Backup File")
+parser.add_argument("input_path", help="Path to the file to backup")
+parser.add_argument("save_path", nargs='?', default=None, help="Path to save the backup (optional)")
+parser.add_argument("-t", "--time", type=float, default=3, help="Time interval in seconds (default: 3)")
+parser.add_argument("-ms", "--milliseconds", type=float, default=None, help="Time interval in milliseconds (overrides -t)")
 
-if (len(sys.argv) == 0) or (len(sys.argv) > 3):
-    print("Usage: python auto_backup.py <file_path> <save_path> invalid number of arguments")
+args = parser.parse_args()
+
+# Use Path to process input and display paths to the user
+
+# Check if the input path is a valid file
+if not Path(args.input_path).is_file():
+    print("The specified file does not exist.")
     exit()
-
-input_path = sys.argv[1]
-print(f"File location provided: {input_path}")
-
-input_path = Path(input_path)
-save_path = input_path.parent / (input_path.stem + "_backup" + input_path.suffix)
-
-if len(sys.argv) == 3:
-    save_path = sys.argv[2]
-    save_path = Path(save_path)
-    print(f"Saving file at: {save_path}")
-
-if os.name == 'nt':
-    profile = os.getenv('USERPROFILE')
-elif os.name == 'posix':
-    profile = os.getenv('HOME')
 else:
-    print("OS not supported")
-    exit()
+    input_path = Path(args.input_path)
+
+print(f"File location provided: {Path(input_path)}")
+
+# Set the save path if not provided
+if not args.save_path:
+    save_path = input_path.parent / (input_path.stem + "_backup" + input_path.suffix)
+else:
+    save_path = Path(save_path)
+
+print(f"Saving file at: {save_path}")
 
 def copy_file():
     global input_path, save_path  # Add this line to access the global variable
@@ -61,7 +75,10 @@ def copy_file():
                 with open(save_path, 'wb') as file:
                     file.write(filedata)
             print(". ", end="\n") # Saved successfully
-            time.sleep(1)
+            if args.milliseconds:
+                time.sleep(args.milliseconds / 1000)  # Convert milliseconds to seconds
+            else:
+                time.sleep(args.time)
         except Exception as e:
             print(e)
             time.sleep(3)
