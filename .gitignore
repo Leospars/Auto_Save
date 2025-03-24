@@ -1,0 +1,7 @@
+# Generated folders
+/build
+/dist
+
+# Generated files
+*/__pycache__
+*.spec
